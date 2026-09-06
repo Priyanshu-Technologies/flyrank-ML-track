@@ -1,1 +1,1 @@
-PASTE-YOUR-DEPLOYED-PAPER-URL-HERE
+https://priyanshu-technologies.github.io/flyrank-ML-track/
