@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Refresh / Content Opportunity Scoring</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f7fa;
+            color: #1f2937;
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 50px 25px 80px;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 55px 45px;
+            border-radius: 18px;
+            margin-bottom: 35px;
+        }
+
+        header h1 {
+            font-size: 42px;
+            line-height: 1.15;
+            margin: 0 0 18px;
+        }
+
+        header p {
+            color: #d1d5db;
+            font-size: 18px;
+            margin: 8px 0;
+        }
+
+        section {
+            background: white;
+            padding: 35px 40px;
+            margin: 24px 0;
+            border-radius: 14px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            font-size: 28px;
+            margin-top: 0;
+            color: #111827;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #374151;
+            margin-top: 28px;
+        }
+
+        .abstract {
+            font-size: 18px;
+            background: #f9fafb;
+            border-left: 5px solid #374151;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .metric {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .metric strong {
+            display: block;
+            font-size: 25px;
+            color: #111827;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: #111827;
+            color: #e5e7eb;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+
+        .note {
+            background: #fffbeb;
+            border-left: 5px solid #d97706;
+            padding: 18px 22px;
+            border-radius: 7px;
+            margin: 20px 0;
+        }
+
+        .safe {
+            background: #f0fdf4;
+            border-left: 5px solid #16a34a;
+            padding: 18px 22px;
+            border-radius: 7px;
+            margin: 20px 0;
+        }
+
+        a {
+            color: #2563eb;
+        }
+
+        footer {
+            text-align: center;
+            color: #6b7280;
+            margin-top: 45px;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 35px 25px;
+            }
+
+            header h1 {
+                font-size: 32px;
+            }
+
+            section {
+                padding: 25px 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+    <h1>Refresh / Content Opportunity Scoring</h1>
+    <p>A machine-learning approach to prioritizing content pages for human review</p>
+    <p><strong>Author:</strong> Priyanshu Sharma</p>
+    <p><strong>Lane:</strong> Refresh / Content Opportunity Scoring</p>
+    <p><strong>Dataset:</strong> FlyRank ML Internship dataset</p>
+</header>
+
+
+<section>
+    <h2>Abstract</h2>
+
+    <div class="abstract">
+        <p>
+            This study asks whether observable page-level search, engagement,
+            visibility, and content signals can help prioritize which content
+            pages should receive human review.
+        </p>
+
+        <p>
+            I evaluated a transparent rule-based baseline and a Logistic
+            Regression ranking model using anonymized FlyRank content data.
+        </p>
+
+        <p>
+            The learned model was evaluated using Precision@50 and a
+            client-grouped validation design to reduce the risk of
+            client-level information appearing across training and test data.
+        </p>
+
+        <p>
+            The Week-4 baseline and learned model were evaluated on the same
+            held-out test clients.
+        </p>
+
+        <p>
+            The resulting ranking is intended as directional decision-support
+            for content review rather than a causal prediction of future
+            performance or the outcome of a content refresh.
+        </p>
+    </div>
+</section>
+
+
+<section>
+    <h2>1. Problem Statement</h2>
+
+    <p>
+        Content teams have limited time for reviewing and improving pages.
+        The practical decision is therefore not simply whether a page is
+        "good" or "bad", but which pages should be investigated first.
+    </p>
+
+    <p>
+        The unit of analysis is a content page for a client. The output is a
+        ranked review queue containing a model score, reason code, and
+        suggested action.
+    </p>
+
+    <p>
+        A human editor can use this queue to investigate whether a page should
+        be refreshed, expanded, protected, monitored, or considered for
+        another content action.
+    </p>
+
+    <p>
+        A false positive can consume limited editorial review capacity,
+        while a false negative can cause a potentially useful page to be
+        overlooked.
+    </p>
+</section>
+
+
+<section>
+    <h2>2. Data</h2>
+
+    <p>
+        The analysis uses the anonymized FlyRank content-refresh starter
+        dataset containing approximately 30,000 content observations across
+        32 clients and 44 columns.
+    </p>
+
+    <p>
+        The data contains observed search visibility, engagement, content,
+        and performance signals over a 90-day observation window.
+    </p>
+
+    <h3>Target / proxy</h3>
+
+    <p>
+        The observed proxy target is
+        <code>is_declining_label</code>, defined as 1 when
+        <code>trend_direction == "down"</code> and 0 otherwise.
+    </p>
+
+    <h3>Excluded fields</h3>
+
+    <ul>
+        <li>
+            <code>trend_direction</code> — used to construct the observed
+            target, so it would leak the label if used as a feature.
+        </li>
+        <li>
+            <code>trend_pct</code> — derived from the same trend information
+            and therefore excluded.
+        </li>
+        <li>
+            <code>content_id</code> — identifier only.
+        </li>
+        <li>
+            <code>client_id</code> — used for grouped validation only,
+            never as a model feature.
+        </li>
+        <li>
+            Future-window outcomes — unavailable at the decision point and
+            therefore excluded.
+        </li>
+    </ul>
+
+    <div class="safe">
+        No client names, domains, URLs, private queries, credentials, or
+        client-identifying information are presented in this paper.
+    </div>
+</section>
+
+
+<section>
+    <h2>3. Baseline</h2>
+
+    <p>
+        The first benchmark was a transparent rule-based score created in
+        Week 4.
+    </p>
+
+    <p>
+        A page received a positive baseline score when
+        <code>days_since_last_update &ge; 180</code> and
+        <code>impressions_90d &ge; 500</code>.
+    </p>
+
+    <p>
+        The baseline score was the page's observed
+        <code>impressions_90d</code> value when both conditions were
+        satisfied and zero otherwise.
+    </p>
+
+    <p>
+        Pages receiving a positive score were assigned the reason code
+        <code>stale_visible_page</code> and the suggested action
+        <code>refresh_review</code>.
+    </p>
+
+    <p>
+        The baseline provides a transparent benchmark that the learned model
+        must beat rather than comparing the model against an arbitrary
+        standard.
+    </p>
+
+    <div class="note">
+        Exact evaluation metrics are generated by the reproducible notebooks
+        and should be updated here after the final fresh run.
+    </div>
+</section>
+
+
+<section>
+    <h2>4. Methodology</h2>
+
+    <h3>Learned model</h3>
+
+    <p>
+        I used Logistic Regression as the first learned model because it is
+        relatively simple, interpretable, reproducible, and appropriate for
+        producing a probability-based ranking.
+    </p>
+
+    <p>
+        The predicted probability of the observed declining label is used as
+        the ranking score.
+    </p>
+
+    <h3>Features</h3>
+
+    <p>
+        The model uses observable search, engagement, content, visibility,
+        and traffic signals including:
+    </p>
+
+    <ul>
+        <li>search volume and competition</li>
+        <li>content age and days since last update</li>
+        <li>impressions, clicks, pageviews, sessions, and users</li>
+        <li>engaged sessions and scroll events</li>
+        <li>recent and previous-period performance signals</li>
+        <li>CTR and average search position</li>
+        <li>engagement, scroll, and AI-traffic percentages</li>
+        <li>content word count</li>
+    </ul>
+
+    <p>
+        Label-derived fields and identifiers were deliberately excluded.
+    </p>
+</section>
+
+
+<section>
+    <h2>5. Evaluation</h2>
+
+    <p>
+        The primary evaluation uses a client-grouped train/test split.
+        All pages belonging to a client remain entirely within either the
+        training set or the held-out test set.
+    </p>
+
+    <p>
+        The primary ranking metric is Precision@50 because the intended use
+        is to prioritize a small review queue.
+    </p>
+
+    <div class="metric-grid">
+        <div class="metric">
+            <strong>Precision@50</strong>
+            <span>Primary ranking metric</span>
+        </div>
+
+        <div class="metric">
+            <strong>Client-grouped</strong>
+            <span>Primary validation design</span>
+        </div>
+
+        <div class="metric">
+            <strong>0.0</strong>
+            <span>Random minus grouped Precision@50 in the Week-6 audit</span>
+        </div>
+    </div>
+
+    <p>
+        The Week-6 audit compared a random row-level split with the
+        client-grouped split. The measured difference in Precision@50 was
+        0.0 in that evaluation run. Therefore, that comparison did not show
+        a measurable validation gap in this particular experiment.
+    </p>
+
+    <div class="note">
+        A zero validation gap in one experiment does not establish universal
+        robustness or guarantee future generalization.
+    </div>
+
+    <h3>Model versus baseline</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Precision@50</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>Week-4 transparent baseline</td>
+                <td>See fresh notebook run</td>
+            </tr>
+
+            <tr>
+                <td>Logistic Regression</td>
+                <td>See fresh notebook run</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Error analysis</h3>
+
+    <p>
+        Model errors were examined as false positives and false negatives
+        relative to the observed declining label.
+    </p>
+
+    <p>
+        False positives represent highly ranked pages that were not labeled
+        as declining, while false negatives represent declining pages that
+        received lower model scores.
+    </p>
+
+    <p>
+        These errors demonstrate why the ranking should be treated as a
+        review-prioritization signal rather than an automatic editorial
+        decision.
+    </p>
+</section>
+
+
+<section>
+    <h2>6. Interpretation</h2>
+
+    <p>
+        Logistic Regression combines multiple observable signals into a
+        directional ranking score.
+    </p>
+
+    <p>
+        Its coefficients indicate which modeled features are associated with
+        higher or lower predicted probability of the observed declining label,
+        holding the other modeled features constant.
+    </p>
+
+    <p>
+        These are predictive associations within the dataset and should not
+        be interpreted as causal effects.
+    </p>
+
+    <p>
+        An important practical finding is that a highly ranked page may still
+        be a poor refresh candidate after human inspection. A page may already
+        satisfy search intent, have strategic importance, or require
+        monitoring instead of a content change.
+    </p>
+
+    <h3>Negative result</h3>
+
+    <p>
+        The Week-6 random-versus-grouped validation comparison produced no
+        measured Precision@50 difference in the evaluation run. This is
+        reported as a negative result rather than being interpreted as proof
+        that the model is universally robust.
+    </p>
+</section>
+
+
+<section>
+    <h2>7. Ranked Recommendations</h2>
+
+    <p>
+        The recommended use of the model is as a ranked decision-support queue
+        for content editors and SEO teams.
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Priority</th>
+                <th>Suggested action</th>
+                <th>Human review</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>High</td>
+                <td>Refresh review</td>
+                <td>Check whether a genuine content opportunity exists.</td>
+            </tr>
+
+            <tr>
+                <td>High</td>
+                <td>Expansion review</td>
+                <td>Check content depth and search intent.</td>
+            </tr>
+
+            <tr>
+                <td>Medium</td>
+                <td>Protection review</td>
+                <td>Check whether existing performance should be preserved.</td>
+            </tr>
+
+            <tr>
+                <td>Lower</td>
+                <td>Monitor</td>
+                <td>Continue observation without immediate change.</td>
+            </tr>
+
+            <tr>
+                <td>Unusual</td>
+                <td>Manual investigation</td>
+                <td>Gather additional context before acting.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Human-review rule</h3>
+
+    <p>
+        Every model-ranked page should be reviewed by a human before a
+        content change is made.
+    </p>
+
+    <p>
+        Reviewers should consider search intent, content quality, freshness,
+        observed performance, strategic importance, and the risk of changing
+        an already successful page.
+    </p>
+
+    <h3>What should NOT be automated</h3>
+
+    <ul>
+        <li>Automatically publishing a content refresh.</li>
+        <li>Automatically deleting or pruning pages.</li>
+        <li>Automatically changing search-intent targeting.</li>
+        <li>Automatically rewriting page content.</li>
+        <li>Automatically redirecting or canonicalizing pages.</li>
+        <li>Automatically claiming that a refresh will improve performance.</li>
+        <li>Automatically overriding editorial or strategic judgment.</li>
+    </ul>
+
+    <div class="safe">
+        The safest interpretation is: <strong>use the model to decide what
+        to review first, not what to publish automatically.</strong>
+    </div>
+</section>
+
+
+<section>
+    <h2>8. Limitations & Honest Framing</h2>
+
+    <p>
+        The current target is an observed declining proxy rather than a
+        genuinely future outcome.
+    </p>
+
+    <p>
+        The analysis therefore does not establish that the model predicts
+        future page performance or that refreshing a page will cause
+        performance to improve.
+    </p>
+
+    <p>
+        The model also does not predict or prove the behavior of Google's
+        ranking algorithm.
+    </p>
+
+    <p>
+        Editorial strategy, business priorities, search-intent changes, and
+        other information outside the modeled dataset may affect the correct
+        decision for an individual page.
+    </p>
+
+    <p>
+        The results should therefore be described as observed, measured,
+        directional, and useful for decision-support rather than causal or
+        guaranteed predictions.
+    </p>
+</section>
+
+
+<section>
+    <h2>9. Reproducibility</h2>
+
+    <p>
+        The complete analysis is available in the project repository:
+    </p>
+
+    <p>
+        <a href="https://github.com/Priyanshu-Technologies/flyrank-ML-track">
+            GitHub repository — FlyRank ML Track
+        </a>
+    </p>
+
+    <h3>Weekly evidence</h3>
+
+    <ul>
+        <li>W01 — Research question</li>
+        <li>W02 — ML task framing</li>
+        <li>W03 — Data contract</li>
+        <li>W04 — Transparent baseline</li>
+        <li>W05 — Logistic Regression model</li>
+        <li>W06 — Validation and leakage audit</li>
+        <li>W07 — Content action playbook</li>
+    </ul>
+
+    <p>
+        The project uses Python, pandas, NumPy, scikit-learn, and DuckDB
+        where warehouse analysis is required. Modeling experiments use
+        a fixed random seed of 42.
+    </p>
+
+    <pre>python3 -m venv .venv
+source .venv/bin/activate
+pip install pandas numpy scikit-learn duckdb ipykernel</pre>
+
+    <p>
+        Warehouse access requires a Hugging Face read token. Credentials are
+        supplied at runtime and are not stored in the repository.
+    </p>
+</section>
+
+
+<section>
+    <h2>Acknowledgments & Data Credit</h2>
+
+    <p>
+        Built on the FlyRank ML Internship dataset.
+    </p>
+
+    <p>
+        <a href="https://flyrank.ai">
+            FlyRank
+        </a>
+    </p>
+</section>
+
+
+<footer>
+    <p>
+        Refresh / Content Opportunity Scoring · Priyanshu Sharma · 2026
+    </p>
+</footer>
+
+</div>
+
+</body>
+</html>
